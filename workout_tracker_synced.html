@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Workout Tracker">
+<title>Workout Tracker</title>
+<style>
+  :root {
+    --bg:#ffffff;--bg2:#f5f5f3;--bg3:#eeede9;
+    --text:#1a1a1a;--text2:#666660;--text3:#999994;
+    --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.18);
+    --info-bg:#e6f1fb;--info-text:#0c447c;
+    --success:#1D9E75;--warn:#EF9F27;--danger:#E24B4A;
+    --radius:8px;--radius-lg:12px;
+  }
+  @media(prefers-color-scheme:dark){
+    :root{--bg:#1c1c1e;--bg2:#2c2c2e;--bg3:#3a3a3c;--text:#f2f2f7;--text2:#aeaeb2;--text3:#636366;--border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.18);--info-bg:#0c2d4a;--info-text:#85b7eb;}
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg3);color:var(--text);min-height:100vh}
+  .app{max-width:680px;margin:0 auto;background:var(--bg);min-height:100vh}
+  .header{padding:16px 16px 0;background:var(--bg);position:sticky;top:0;z-index:10;border-bottom:0.5px solid var(--border)}
+  .header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .header h1{font-size:17px;font-weight:600}
+  .sync-status{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px}
+  .sync-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0}
+  .sync-dot.synced{background:var(--success)}
+  .sync-dot.syncing{background:var(--warn)}
+  .sync-dot.error{background:var(--danger)}
+  .tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:12px;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{padding:7px 14px;border-radius:var(--radius);border:0.5px solid var(--border2);background:transparent;font-size:13px;cursor:pointer;color:var(--text2);white-space:nowrap;flex-shrink:0}
+  .tab.active{background:var(--bg2);color:var(--text);font-weight:500}
+  .content{padding:16px}
+  .section{display:none}.section.active{display:block}
+  .week-nav{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .week-nav button{background:none;border:0.5px solid var(--border2);border-radius:var(--radius);padding:6px 12px;cursor:pointer;font-size:14px;color:var(--text)}
+  .week-label{font-size:14px;font-weight:500;flex:1;text-align:center}
+  .week-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:14px}
+  .day-col{border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+  .day-head{padding:6px 4px;text-align:center;border-bottom:0.5px solid var(--border)}
+  .day-head.today{background:var(--info-bg)}
+  .day-head.today .day-name{color:var(--info-text)}
+  .day-name{font-size:11px;font-weight:500}
+  .day-date{font-size:10px;color:var(--text2);margin-top:1px}
+  .session-list{padding:4px}
+  .chip-block{margin-bottom:3px}
+  .chip-row{display:flex;border-radius:5px;overflow:hidden}
+  .chip-main{flex:1;padding:4px 5px;font-size:10px;font-weight:500;cursor:pointer;border:none;text-align:left;line-height:1.3;min-width:0}
+  .chip-main.done{opacity:0.4;text-decoration:line-through}
+  .chip-pencil{border:none;cursor:pointer;padding:0 5px;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0.5}
+  .chip-pencil:hover,.chip-pencil.has-note{opacity:1}
+  .chip-upper .chip-main,.chip-upper .chip-pencil{background:#EEEDFE;color:#3C3489}
+  .chip-legs .chip-main,.chip-legs .chip-pencil{background:#E1F5EE;color:#085041}
+  .chip-abs .chip-main,.chip-abs .chip-pencil{background:#FAEEDA;color:#633806}
+  .chip-cardio .chip-main,.chip-cardio .chip-pencil{background:#E6F1FB;color:#0C447C}
+  .chip-yoga .chip-main,.chip-yoga .chip-pencil{background:#FBEAF0;color:#72243E}
+  .chip-note-label{font-size:9px;font-weight:400;display:block;margin-top:1px;opacity:0.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chip-rest{display:block;padding:4px 5px;border-radius:5px;font-size:10px;background:var(--bg2);color:var(--text2)}
+  .prog-wrap{height:5px;background:var(--bg2);border-radius:3px;overflow:hidden}
+  .prog-bar{height:100%;border-radius:3px;transition:width 0.3s}
+  .note-panel{border:0.5px solid var(--border2);border-radius:var(--radius-lg);padding:14px;margin-top:14px;background:var(--bg2)}
+  .note-panel-title{font-size:13px;font-weight:500;margin-bottom:6px}
+  .note-hint{font-size:12px;color:var(--text2);margin-bottom:10px}
+  .note-fields{display:flex;flex-direction:column;gap:8px}
+  .note-fields select,.note-fields input[type=text]{width:100%;font-size:14px;padding:10px 12px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);appearance:none;-webkit-appearance:none}
+  .note-fields button{width:100%;font-size:14px;padding:11px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);cursor:pointer;color:var(--text);font-weight:500}
+  .note-feedback{font-size:12px;color:var(--text2);margin-top:8px;min-height:16px}
+  .form-section{display:none}.form-section.active{display:block}
+  .type-tabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
+  .type-tab{padding:6px 12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:transparent;font-size:13px;cursor:pointer;color:var(--text2)}
+  .type-tab.active{background:var(--bg2);color:var(--text);font-weight:500}
+  .field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+  .field label{font-size:12px;color:var(--text2)}
+  .field input,.field select{font-size:15px;padding:10px 12px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);width:100%;appearance:none;-webkit-appearance:none}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .field-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .add-btn{width:100%;padding:12px;font-size:15px;cursor:pointer;background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius);color:var(--text);font-weight:500;margin-top:4px}
+  .log-table{width:100%;border-collapse:collapse;font-size:13px}
+  .log-table td{padding:10px;border-bottom:0.5px solid var(--border);vertical-align:middle;color:var(--text)}
+  .log-table tr:last-child td{border-bottom:none}
+  .badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+  .badge-upper{background:#EEEDFE;color:#3C3489}
+  .badge-legs{background:#E1F5EE;color:#085041}
+  .badge-abs{background:#FAEEDA;color:#633806}
+  .badge-cardio{background:#E6F1FB;color:#0C447C}
+  .badge-yoga{background:#FBEAF0;color:#72243E}
+  .del-btn{background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px;padding:4px 8px;border-radius:var(--radius)}
+  .card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:14px;overflow:hidden}
+  .sec-title{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+  .empty{text-align:center;padding:3rem 0;color:var(--text2);font-size:14px}
+  .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+  .stat-card{background:var(--bg2);border-radius:var(--radius);padding:12px}
+  .stat-label{font-size:11px;color:var(--text2);margin-bottom:4px}
+  .stat-val{font-size:22px;font-weight:600}
+  .bar-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border)}
+  .bar-row:last-child{border-bottom:none}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--radius);padding:10px 20px;font-size:14px;z-index:999;white-space:nowrap;box-shadow:0 2px 12px rgba(0,0,0,0.15)}
+  .sync-banner{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--text2);display:flex;align-items:center;gap:8px}
+  .sync-btn{margin-left:auto;font-size:12px;padding:5px 12px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);cursor:pointer;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-top">
+      <h1>&#127947; Workout Tracker</h1>
+      <div class="sync-status">
+        <div class="sync-dot" id="sync-dot"></div>
+        <span id="sync-label">Not synced</span>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('schedule')">&#128197; This week</button>
+      <button class="tab" onclick="showTab('log')">&#43; Log workout</button>
+      <button class="tab" onclick="showTab('history')">&#128203; History</button>
+      <button class="tab" onclick="showTab('summary')">&#128200; Summary</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="section active" id="tab-schedule">
+      <div id="sync-banner-area"></div>
+      <div class="week-nav">
+        <button onclick="shiftWeek(-1)">&#8249;</button>
+        <span class="week-label" id="week-label"></span>
+        <button onclick="shiftWeek(1)">&#8250;</button>
+      </div>
+      <div class="week-grid" id="week-grid"></div>
+      <div id="week-progress" style="margin-bottom:14px"></div>
+      <div class="note-panel">
+        <div class="note-panel-title">&#9998; Session note</div>
+        <div class="note-hint">Pick a session, type your note, save. Tap &#9998; on a chip to pre-select it.</div>
+        <div class="note-fields">
+          <select id="note-session"><option value="">&#8212; pick session &#8212;</option></select>
+          <input type="text" id="note-text" placeholder="e.g. climbing stairs, felt strong...">
+          <button onclick="saveNotePanel()">&#10003; Save note</button>
+        </div>
+        <div class="note-feedback" id="note-feedback"></div>
+      </div>
+    </div>
+
+    <div class="section" id="tab-log">
+      <div class="type-tabs">
+        <button class="type-tab active" id="type-upper" onclick="switchType('upper')">Upper body</button>
+        <button class="type-tab" id="type-legs" onclick="switchType('legs')">Legs</button>
+        <button class="type-tab" id="type-abs" onclick="switchType('abs')">Abs</button>
+        <button class="type-tab" id="type-cardio" onclick="switchType('cardio')">Cardio</button>
+        <button class="type-tab" id="type-yoga" onclick="switchType('yoga')">Yoga</button>
+      </div>
+      <div class="form-section active" id="form-upper">
+        <div class="field"><label>Date</label><input type="date" id="u-date"></div>
+        <div class="field"><label>Exercise</label><input type="text" id="u-exercise" placeholder="e.g. Bench press"></div>
+        <div class="field-row3">
+          <div class="field"><label>Sets</label><input type="number" id="u-sets" min="1" placeholder="3"></div>
+          <div class="field"><label>Reps</label><input type="number" id="u-reps" min="1" placeholder="10"></div>
+          <div class="field"><label>kg</label><input type="number" id="u-weight" min="0" placeholder="60"></div>
+        </div>
+        <div class="field"><label>Notes</label><input type="text" id="u-notes" placeholder="How it felt, PR..."></div>
+        <button class="add-btn" onclick="addEntry('upper')">+ Add</button>
+      </div>
+      <div class="form-section" id="form-legs">
+        <div class="field"><label>Date</label><input type="date" id="l-date"></div>
+        <div class="field"><label>Exercise</label><input type="text" id="l-exercise" placeholder="e.g. Squat"></div>
+        <div class="field-row3">
+          <div class="field"><label>Sets</label><input type="number" id="l-sets" min="1" placeholder="4"></div>
+          <div class="field"><label>Reps</label><input type="number" id="l-reps" min="1" placeholder="8"></div>
+          <div class="field"><label>kg</label><input type="number" id="l-weight" min="0" placeholder="80"></div>
+        </div>
+        <div class="field"><label>Notes</label><input type="text" id="l-notes" placeholder=""></div>
+        <button class="add-btn" onclick="addEntry('legs')">+ Add</button>
+      </div>
+      <div class="form-section" id="form-abs">
+        <div class="field"><label>Date</label><input type="date" id="a-date"></div>
+        <div class="field"><label>Exercise</label><input type="text" id="a-exercise" placeholder="e.g. Plank"></div>
+        <div class="field-row">
+          <div class="field"><label>Sets</label><input type="number" id="a-sets" min="1" placeholder="3"></div>
+          <div class="field"><label>Reps / secs</label><input type="number" id="a-reps" min="1" placeholder="20"></div>
+        </div>
+        <div class="field"><label>Notes</label><input type="text" id="a-notes" placeholder=""></div>
+        <button class="add-btn" onclick="addEntry('abs')">+ Add</button>
+      </div>
+      <div class="form-section" id="form-cardio">
+        <div class="field"><label>Date</label><input type="date" id="c-date"></div>
+        <div class="field"><label>Activity</label><select id="c-activity"><option>Running</option><option>Cycling</option><option>Swimming</option><option>Rowing</option><option>Other</option></select></div>
+        <div class="field-row">
+          <div class="field"><label>Duration (min)</label><input type="number" id="c-duration" min="1" placeholder="30"></div>
+          <div class="field"><label>Distance (km)</label><input type="number" id="c-distance" min="0" step="0.1" placeholder="5"></div>
+        </div>
+        <div class="field"><label>Notes</label><input type="text" id="c-notes" placeholder="Pace, route..."></div>
+        <button class="add-btn" onclick="addEntry('cardio')">+ Add</button>
+      </div>
+      <div class="form-section" id="form-yoga">
+        <div class="field"><label>Date</label><input type="date" id="y-date"></div>
+        <div class="field"><label>Style</label><select id="y-style"><option>Hatha</option><option>Vinyasa</option><option>Yin</option><option>Restorative</option><option>Ashtanga</option><option>Other</option></select></div>
+        <div class="field-row">
+          <div class="field"><label>Duration (min)</label><input type="number" id="y-duration" min="1" placeholder="45"></div>
+          <div class="field"><label>Intensity</label><select id="y-intensity"><option>Low</option><option>Medium</option><option>High</option></select></div>
+        </div>
+        <div class="field"><label>Notes</label><input type="text" id="y-notes" placeholder=""></div>
+        <button class="add-btn" onclick="addEntry('yoga')">+ Add</button>
+      </div>
+    </div>
+
+    <div class="section" id="tab-history">
+      <div class="field" style="margin-bottom:14px;max-width:240px">
+        <label>Filter by type</label>
+        <select id="filter-type" onchange="renderHistory()">
+          <option value="">All types</option>
+          <option value="upper">Upper body</option>
+          <option value="legs">Legs</option>
+          <option value="abs">Abs</option>
+          <option value="cardio">Cardio</option>
+          <option value="yoga">Yoga</option>
+        </select>
+      </div>
+      <div id="history-content"></div>
+    </div>
+
+    <div class="section" id="tab-summary">
+      <div id="summary-content"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SCHEDULE={1:['upper','abs','cardio'],2:['legs'],3:['upper','legs'],4:['abs'],5:['upper','cardio'],6:['legs','cardio'],0:[]};
+const TYPE_LABEL={upper:'Upper body',legs:'Legs',abs:'Abs',cardio:'Cardio',yoga:'Yoga'};
+const DAY_NAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const FILE_NAME='workout_tracker_data.json';
+const GDRIVE_MCP='https://drivemcp.googleapis.com/mcp/v1';
+
+let entries=[], completions={}, sNotes={}, weekOffset=0;
+let fileId=null, syncState='idle';
+
+function loadLocal(){
+  try{entries=JSON.parse(localStorage.getItem('wt_e')||'[]');}catch(e){}
+  try{completions=JSON.parse(localStorage.getItem('wt_c')||'{}');}catch(e){}
+  try{sNotes=JSON.parse(localStorage.getItem('wt_n')||'{}');}catch(e){}
+  try{fileId=localStorage.getItem('wt_fid')||null;}catch(e){}
+}
+
+function saveLocal(){
+  try{localStorage.setItem('wt_e',JSON.stringify(entries));}catch(e){}
+  try{localStorage.setItem('wt_c',JSON.stringify(completions));}catch(e){}
+  try{localStorage.setItem('wt_n',JSON.stringify(sNotes));}catch(e){}
+  if(fileId) try{localStorage.setItem('wt_fid',fileId);}catch(e){}
+}
+
+function setSyncState(state, msg){
+  syncState=state;
+  const dot=document.getElementById('sync-dot');
+  const lbl=document.getElementById('sync-label');
+  dot.className='sync-dot '+(state==='synced'?'synced':state==='syncing'?'syncing':state==='error'?'error':'');
+  lbl.textContent=msg||state;
+}
+
+function getPayload(){
+  return JSON.stringify({entries,completions,sNotes,fileId,savedAt:new Date().toISOString()});
+}
+
+async function callClaude(userMsg){
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:1000,
+      system:'You are a file sync assistant. Use the Google Drive MCP tools to read and write files. Respond ONLY with a JSON object, no markdown, no explanation. For search results return {action, fileId, content}. For writes return {action, fileId}. For reads return {action, content}.',
+      messages:[{role:'user',content:userMsg}],
+      mcp_servers:[{type:'url',url:GDRIVE_MCP,name:'gdrive'}]
+    })
+  });
+  if(!resp.ok) throw new Error('API error '+resp.status);
+  const data=await resp.json();
+  const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+  const clean=text.replace(/```json|```/g,'').trim();
+  try{return JSON.parse(clean);}catch(e){return {raw:text};}
+}
+
+async function syncToCloud(){
+  setSyncState('syncing','Syncing...');
+  updateSyncBanner();
+  try{
+    const payload=getPayload();
+    let result;
+    if(fileId){
+      result=await callClaude(`Update the Google Drive file with id "${fileId}" by overwriting its entire content with this JSON data. The file is named "${FILE_NAME}". Return {action:"updated", fileId:"${fileId}"}\n\nData:\n${payload}`);
+    } else {
+      result=await callClaude(`Search Google Drive for a file named exactly "${FILE_NAME}". If found, return {action:"found", fileId:"<id>"}. If not found, create a new plain text file named "${FILE_NAME}" in the root of Google Drive with this content and return {action:"created", fileId:"<new_id>"}.\n\nContent:\n${payload}`);
+      if(result.fileId){fileId=result.fileId;localStorage.setItem('wt_fid',fileId);}
+    }
+    saveLocal();
+    setSyncState('synced','Synced to Drive');
+    updateSyncBanner();
+    showToast('Saved to Google Drive!');
+  }catch(e){
+    setSyncState('error','Sync failed');
+    updateSyncBanner();
+    showToast('Sync failed — saved locally');
+  }
+}
+
+async function loadFromCloud(){
+  setSyncState('syncing','Loading from Drive...');
+  updateSyncBanner();
+  try{
+    let id=fileId;
+    if(!id){
+      const found=await callClaude(`Search Google Drive for a file named exactly "${FILE_NAME}". If found return {action:"found", fileId:"<id>"}. If not found return {action:"notfound"}.`);
+      if(found.action==='notfound'||!found.fileId){
+        setSyncState('idle','No cloud data yet');
+        updateSyncBanner();
+        return;
+      }
+      id=found.fileId;fileId=id;localStorage.setItem('wt_fid',fileId);
+    }
+    const result=await callClaude(`Read the full text content of Google Drive file with id "${id}". Return {action:"read", content:"<full file text>"}.`);
+    if(result.content){
+      const data=JSON.parse(result.content);
+      if(data.entries) entries=data.entries;
+      if(data.completions) completions=data.completions;
+      if(data.sNotes) sNotes=data.sNotes;
+      saveLocal();
+      renderSchedule();renderHistory();renderSummary();
+      setSyncState('synced','Loaded from Drive');
+      updateSyncBanner();
+      showToast('Loaded from Google Drive!');
+    }
+  }catch(e){
+    setSyncState('error','Load failed');
+    updateSyncBanner();
+    showToast('Could not load from Drive');
+  }
+}
+
+function updateSyncBanner(){
+  const el=document.getElementById('sync-banner-area');
+  const icons={idle:'&#9728;',syncing:'&#8635;',synced:'&#10003;',error:'&#9888;'};
+  const msgs={idle:'Not synced yet.',syncing:'Syncing with Google Drive...',synced:'Synced with Google Drive.',error:'Last sync failed.'};
+  el.innerHTML=`<div class="sync-banner">${icons[syncState]||''} ${msgs[syncState]||''}
+    <button class="sync-btn" onclick="syncToCloud()">&#8635; Sync now</button>
+    <button class="sync-btn" onclick="loadFromCloud()">&#8615; Load</button>
+  </div>`;
+}
+
+function persist(){saveLocal();syncToCloud();}
+
+function todayStr(){return new Date().toISOString().split('T')[0];}
+function getMonday(offset){const d=new Date();d.setDate(d.getDate()-d.getDay()+1+offset*7);d.setHours(0,0,0,0);return d;}
+function fmtDate(d){return d.toISOString().split('T')[0];}
+
+function showTab(t){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tabs .tab').forEach(b=>{
+    const txt=b.textContent.toLowerCase();
+    b.classList.toggle('active',(t==='schedule'&&txt.includes('week'))||(t==='log'&&txt.includes('log'))||(t==='history'&&txt.includes('history'))||(t==='summary'&&txt.includes('summary')));
+  });
+  document.getElementById('tab-'+t).classList.add('active');
+  if(t==='schedule')renderSchedule();
+  if(t==='history')renderHistory();
+  if(t==='summary')renderSummary();
+}
+
+function switchType(type){
+  ['upper','legs','abs','cardio','yoga'].forEach(t=>{
+    document.getElementById('type-'+t).classList.toggle('active',t===type);
+    document.getElementById('form-'+t).classList.toggle('active',t===type);
+  });
+}
+
+function shiftWeek(n){weekOffset+=n;renderSchedule();}
+
+function renderSchedule(){
+  const mon=getMonday(weekOffset);
+  const sun=new Date(mon);sun.setDate(sun.getDate()+6);
+  document.getElementById('week-label').textContent=
+    mon.toLocaleDateString('en-SG',{month:'short',day:'numeric'})+' \u2013 '+
+    sun.toLocaleDateString('en-SG',{month:'short',day:'numeric'});
+
+  const tStr=todayStr();
+  let totalPlanned=0,totalDone=0,html='';
+  const sessionOptions=[];
+
+  for(let i=0;i<7;i++){
+    const d=new Date(mon);d.setDate(d.getDate()+i);
+    const dStr=fmtDate(d);const dow=d.getDay();
+    const isToday=dStr===tStr;
+    const planned=SCHEDULE[dow]||[];
+    totalPlanned+=planned.length;
+    planned.forEach(t=>{if(completions[dStr+'|'+t])totalDone++;});
+    const allTypes=[...planned,'yoga'];
+    let chips='';
+    allTypes.forEach(type=>{
+      const key=dStr+'|'+type;
+      const done=!!completions[key];
+      const note=sNotes[key]||'';
+      const noteSnip=note?`<span class="chip-note-label">${note}</span>`:'';
+      sessionOptions.push({key,label:DAY_NAMES[dow]+' '+d.getDate()+' \u00b7 '+TYPE_LABEL[type],note});
+      chips+=`<div class="chip-block"><div class="chip-row chip-${type}">
+        <button class="chip-main${done?' done':''}" onclick="tapChip('${dStr}','${type}')">${TYPE_LABEL[type]}${noteSnip}</button>
+        <button class="chip-pencil${note?' has-note':''}" onclick="focusNote('${key}')">\u270e</button>
+      </div></div>`;
+    });
+    const rest=planned.length===0?`<div class="chip-block"><span class="chip-rest">Rest</span></div>`:'';
+    html+=`<div class="day-col"><div class="day-head${isToday?' today':''}"><div class="day-name">${DAY_NAMES[dow]}</div><div class="day-date">${d.getDate()}</div></div><div class="session-list">${chips}${rest}</div></div>`;
+  }
+  document.getElementById('week-grid').innerHTML=html;
+
+  const sel=document.getElementById('note-session');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">\u2014 pick session \u2014</option>';
+  sessionOptions.forEach(o=>{const opt=document.createElement('option');opt.value=o.key;opt.textContent=o.label+(o.note?' \u2713':'');sel.appendChild(opt);});
+  if(prev) sel.value=prev;
+
+  const pct=totalPlanned?Math.round(totalDone/totalPlanned*100):0;
+  const barColor=pct<40?'#E24B4A':pct<75?'#EF9F27':'#1D9E75';
+  document.getElementById('week-progress').innerHTML=`<div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;color:var(--text2)">Week progress</span><div class="prog-wrap" style="flex:1"><div class="prog-bar" style="width:${pct}%;background:${barColor}"></div></div><span style="font-size:13px;font-weight:500">${totalDone}/${totalPlanned}</span></div>`;
+}
+
+function tapChip(dStr,type){
+  const key=dStr+'|'+type;
+  if(completions[key]){delete completions[key];entries=entries.filter(e=>!(e.date===dStr&&e.type===type&&e.fromSchedule));}
+  else{completions[key]=true;entries.unshift({id:Date.now(),type,date:dStr,fromSchedule:true,note:sNotes[key]||''});}
+  persist();renderSchedule();
+}
+
+function focusNote(key){
+  document.getElementById('note-session').value=key;
+  const t=document.getElementById('note-text');
+  t.value=sNotes[key]||'';t.focus();
+  document.getElementById('note-feedback').textContent='';
+}
+
+function saveNotePanel(){
+  const key=document.getElementById('note-session').value;
+  if(!key){document.getElementById('note-feedback').textContent='Please pick a session first.';return;}
+  const val=document.getElementById('note-text').value.trim();
+  if(val) sNotes[key]=val; else delete sNotes[key];
+  const parts=key.split('|');
+  const ex=entries.find(e=>e.date===parts[0]&&e.type===parts[1]&&e.fromSchedule);
+  if(ex) ex.note=val;
+  persist();
+  const fb=document.getElementById('note-feedback');
+  fb.textContent=val?'Note saved!':'Note cleared.';
+  setTimeout(()=>{fb.textContent='';},2000);
+  renderSchedule();document.getElementById('note-session').value=key;
+}
+
+function addEntry(type){
+  const pfx={upper:'u',legs:'l',abs:'a',cardio:'c',yoga:'y'}[type];
+  let entry={id:Date.now(),type};
+  if(type==='upper'||type==='legs'){
+    const ex=document.getElementById(pfx+'-exercise').value.trim();
+    if(!ex){alert('Please enter an exercise name.');return;}
+    entry.date=document.getElementById(pfx+'-date').value||todayStr();
+    entry.exercise=ex;entry.sets=document.getElementById(pfx+'-sets').value||'-';
+    entry.reps=document.getElementById(pfx+'-reps').value||'-';entry.weight=document.getElementById(pfx+'-weight').value||'-';
+    entry.note=document.getElementById(pfx+'-notes').value.trim();
+    document.getElementById(pfx+'-exercise').value='';document.getElementById(pfx+'-notes').value='';
+  } else if(type==='abs'){
+    const ex=document.getElementById('a-exercise').value.trim();
+    if(!ex){alert('Please enter an exercise name.');return;}
+    entry.date=document.getElementById('a-date').value||todayStr();
+    entry.exercise=ex;entry.sets=document.getElementById('a-sets').value||'-';
+    entry.reps=document.getElementById('a-reps').value||'-';entry.note=document.getElementById('a-notes').value.trim();
+    document.getElementById('a-exercise').value='';document.getElementById('a-notes').value='';
+  } else if(type==='cardio'){
+    entry.date=document.getElementById('c-date').value||todayStr();
+    entry.activity=document.getElementById('c-activity').value;
+    entry.duration=document.getElementById('c-duration').value||'-';entry.distance=document.getElementById('c-distance').value||'-';
+    entry.note=document.getElementById('c-notes').value.trim();
+    document.getElementById('c-duration').value='';document.getElementById('c-distance').value='';document.getElementById('c-notes').value='';
+  } else {
+    entry.date=document.getElementById('y-date').value||todayStr();entry.style=document.getElementById('y-style').value;
+    entry.duration=document.getElementById('y-duration').value||'-';entry.intensity=document.getElementById('y-intensity').value;
+    entry.note=document.getElementById('y-notes').value.trim();
+    document.getElementById('y-duration').value='';document.getElementById('y-notes').value='';
+  }
+  entries.unshift(entry);completions[entry.date+'|'+type]=true;
+  persist();showToast('Logged!');
+}
+
+function deleteEntry(id){
+  const e=entries.find(x=>x.id===id);
+  if(e) delete completions[e.date+'|'+e.type];
+  entries=entries.filter(x=>x.id!==id);
+  persist();renderHistory();renderSummary();renderSchedule();
+}
+
+function entryRow(e){
+  const badge=`<span class="badge badge-${e.type}">${TYPE_LABEL[e.type]}</span>`;
+  const n=e.note||'';const ns=n?` <span style="color:var(--text2);font-size:12px">\u00b7 ${n}</span>`:'';
+  let detail='';
+  if(e.fromSchedule&&!e.exercise&&!e.activity&&!e.style) detail=n||'<span style="color:var(--text2);font-size:12px">Marked done</span>';
+  else if(e.type==='upper'||e.type==='legs') detail=`<strong>${e.exercise}</strong> ${e.sets}\u00d7${e.reps} @ ${e.weight}kg${ns}`;
+  else if(e.type==='abs') detail=`<strong>${e.exercise}</strong> ${e.sets}\u00d7${e.reps}${ns}`;
+  else if(e.type==='cardio') detail=`<strong>${e.activity}</strong> ${e.duration} min \u00b7 ${e.distance} km${ns}`;
+  else detail=`<strong>${e.style}</strong> ${e.duration} min \u00b7 ${e.intensity}${ns}`;
+  return`<tr><td style="width:90px;padding:10px">${badge}</td><td style="padding:10px">${detail}</td><td style="width:40px;text-align:right;padding:10px"><button class="del-btn" onclick="deleteEntry(${e.id})">\u2715</button></td></tr>`;
+}
+
+function renderHistory(){
+  const filter=document.getElementById('filter-type').value;
+  const filtered=filter?entries.filter(e=>e.type===filter):entries;
+  const el=document.getElementById('history-content');
+  if(!filtered.length){el.innerHTML='<div class="empty">No entries yet.<br>Start logging your workouts!</div>';return;}
+  const grouped={};
+  filtered.forEach(e=>{if(!grouped[e.date])grouped[e.date]=[];grouped[e.date].push(e);});
+  const dates=Object.keys(grouped).sort((a,b)=>b.localeCompare(a));
+  el.innerHTML=dates.map(date=>{
+    const d=new Date(date+'T00:00:00');
+    const label=d.toLocaleDateString('en-SG',{weekday:'short',month:'short',day:'numeric'});
+    return`<div style="margin-bottom:14px"><div class="sec-title">${label}</div><div class="card"><table class="log-table" style="width:100%"><tbody>${grouped[date].map(e=>entryRow(e)).join('')}</tbody></table></div></div>`;
+  }).join('');
+}
+
+function renderSummary(){
+  const el=document.getElementById('summary-content');
+  if(!entries.length){el.innerHTML='<div class="empty">No data yet.</div>';return;}
+  const total=entries.length;
+  const tc={upper:0,legs:0,abs:0,cardio:0,yoga:0};
+  entries.forEach(e=>{if(tc[e.type]!==undefined)tc[e.type]++;});
+  const cardioMins=entries.filter(e=>e.type==='cardio'&&e.duration&&e.duration!=='-').reduce((s,e)=>s+Number(e.duration),0);
+  const yogaMins=entries.filter(e=>e.type==='yoga'&&e.duration&&e.duration!=='-').reduce((s,e)=>s+Number(e.duration),0);
+  const barColors={upper:'#7F77DD',legs:'#1D9E75',abs:'#BA7517',cardio:'#378ADD',yoga:'#D4537E'};
+  const bars=Object.entries(tc).map(([t,c])=>`
+    <div class="bar-row">
+      <span class="badge badge-${t}" style="min-width:80px;text-align:center">${TYPE_LABEL[t]}</span>
+      <div style="flex:1;background:var(--bg2);border-radius:3px;height:7px"><div style="height:7px;border-radius:3px;background:${barColors[t]};width:${total?Math.round(c/total*100):0}%"></div></div>
+      <span style="font-size:13px;color:var(--text2);min-width:24px;text-align:right">${c}</span>
+    </div>`).join('');
+  el.innerHTML=`
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Sessions</div><div class="stat-val">${total}</div></div>
+      <div class="stat-card"><div class="stat-label">Cardio min</div><div class="stat-val">${cardioMins}</div></div>
+      <div class="stat-card"><div class="stat-label">Yoga min</div><div class="stat-val">${yogaMins}</div></div>
+    </div>
+    <div class="sec-title">Breakdown</div>
+    <div class="card" style="padding:0 14px">${bars}</div>`;
+}
+
+function showToast(msg){
+  const t=document.createElement('div');t.className='toast';t.textContent=msg;
+  document.body.appendChild(t);setTimeout(()=>t.remove(),2500);
+}
+
+loadLocal();
+updateSyncBanner();
+const d=todayStr();
+['u-date','l-date','a-date','c-date','y-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=d;});
+renderSchedule();
+loadFromCloud();
+</script>
+</body>
+</html>
