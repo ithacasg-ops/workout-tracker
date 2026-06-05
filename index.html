@@ -366,9 +366,9 @@ function updateSyncBanner(){
 
 function persist(){saveLocal();syncToCloud();}
 
-function todayStr(){return new Date().toISOString().split('T')[0];}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function getMonday(offset){const d=new Date();d.setDate(d.getDate()-d.getDay()+1+offset*7);d.setHours(0,0,0,0);return d;}
-function fmtDate(d){return d.toISOString().split('T')[0];}
+function fmtDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 
 function showTab(t){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
