@@ -57,6 +57,7 @@
   .chip-abs .chip-main,.chip-abs .chip-pencil{background:#FAEEDA;color:#633806}
   .chip-cardio .chip-main,.chip-cardio .chip-pencil{background:#E6F1FB;color:#0C447C}
   .chip-yoga .chip-main,.chip-yoga .chip-pencil{background:#FBEAF0;color:#72243E}
+  .chip-fullbody .chip-main,.chip-fullbody .chip-pencil{background:#F1EFE8;color:#444441}
   .chip-note-label{font-size:9px;font-weight:400;display:block;margin-top:1px;opacity:0.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .chip-rest{display:block;padding:4px 5px;border-radius:5px;font-size:10px;background:var(--bg2);color:var(--text2)}
   .prog-wrap{height:5px;background:var(--bg2);border-radius:3px;overflow:hidden}
@@ -87,6 +88,7 @@
   .badge-abs{background:#FAEEDA;color:#633806}
   .badge-cardio{background:#E6F1FB;color:#0C447C}
   .badge-yoga{background:#FBEAF0;color:#72243E}
+  .badge-fullbody{background:#F1EFE8;color:#444441}
   .del-btn{background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px;padding:4px 8px;border-radius:var(--radius)}
   .card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:14px;overflow:hidden}
   .sec-title{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
@@ -150,6 +152,7 @@
         <button class="type-tab" id="type-abs" onclick="switchType('abs')">Abs</button>
         <button class="type-tab" id="type-cardio" onclick="switchType('cardio')">Cardio</button>
         <button class="type-tab" id="type-yoga" onclick="switchType('yoga')">Yoga</button>
+        <button class="type-tab" id="type-fullbody" onclick="switchType('fullbody')">Full body</button>
       </div>
       <div class="form-section active" id="form-upper">
         <div class="field"><label>Date</label><input type="date" id="u-date"></div>
@@ -202,6 +205,17 @@
         </div>
         <div class="field"><label>Notes</label><input type="text" id="y-notes" placeholder=""></div>
         <button class="add-btn" onclick="addEntry('yoga')">+ Add</button>
+      <div class="form-section" id="form-fullbody">
+        <div class="field"><label>Date</label><input type="date" id="fb-date"></div>
+        <div class="field"><label>Exercise</label><input type="text" id="fb-exercise" placeholder="e.g. Deadlift + Push-up + Squat"></div>
+        <div class="field-row3">
+          <div class="field"><label>Sets</label><input type="number" id="fb-sets" min="1" placeholder="3"></div>
+          <div class="field"><label>Reps</label><input type="number" id="fb-reps" min="1" placeholder="10"></div>
+          <div class="field"><label>kg</label><input type="number" id="fb-weight" min="0" placeholder="60"></div>
+        </div>
+        <div class="field"><label>Notes</label><input type="text" id="fb-notes" placeholder="Circuit, superset..."></div>
+        <button class="add-btn" onclick="addEntry('fullbody')">+ Add</button>
+      </div>
       </div>
     </div>
 
@@ -215,6 +229,7 @@
           <option value="abs">Abs</option>
           <option value="cardio">Cardio</option>
           <option value="yoga">Yoga</option>
+          <option value="fullbody">Full body</option>
         </select>
       </div>
       <div id="history-content"></div>
@@ -229,7 +244,7 @@
 
 <script>
 const SCHEDULE={1:['upper','abs','cardio'],2:['legs'],3:['upper','legs'],4:['abs'],5:['upper','cardio'],6:['legs','cardio'],0:[]};
-const TYPE_LABEL={upper:'Upper body',legs:'Legs',abs:'Abs',cardio:'Cardio',yoga:'Yoga'};
+const TYPE_LABEL={upper:'Upper body',legs:'Legs',abs:'Abs',cardio:'Cardio',yoga:'Yoga',fullbody:'Full body'};
 const DAY_NAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const FILE_NAME='workout_tracker_data.json';
 const GDRIVE_MCP='https://drivemcp.googleapis.com/mcp/v1';
@@ -367,7 +382,7 @@ function showTab(t){
 }
 
 function switchType(type){
-  ['upper','legs','abs','cardio','yoga'].forEach(t=>{
+  ['upper','legs','abs','cardio','yoga','fullbody'].forEach(t=>{
     document.getElementById('type-'+t).classList.toggle('active',t===type);
     document.getElementById('form-'+t).classList.toggle('active',t===type);
   });
@@ -452,7 +467,7 @@ function saveNotePanel(){
 }
 
 function addEntry(type){
-  const pfx={upper:'u',legs:'l',abs:'a',cardio:'c',yoga:'y'}[type];
+  const pfx={upper:'u',legs:'l',abs:'a',cardio:'c',yoga:'y',fullbody:'fb'}[type];
   let entry={id:Date.now(),type};
   if(type==='upper'||type==='legs'){
     const ex=document.getElementById(pfx+'-exercise').value.trim();
@@ -475,11 +490,19 @@ function addEntry(type){
     entry.duration=document.getElementById('c-duration').value||'-';entry.distance=document.getElementById('c-distance').value||'-';
     entry.note=document.getElementById('c-notes').value.trim();
     document.getElementById('c-duration').value='';document.getElementById('c-distance').value='';document.getElementById('c-notes').value='';
-  } else {
+  } else if(type==='yoga'){
     entry.date=document.getElementById('y-date').value||todayStr();entry.style=document.getElementById('y-style').value;
     entry.duration=document.getElementById('y-duration').value||'-';entry.intensity=document.getElementById('y-intensity').value;
     entry.note=document.getElementById('y-notes').value.trim();
     document.getElementById('y-duration').value='';document.getElementById('y-notes').value='';
+  } else {
+    const ex=document.getElementById('fb-exercise').value.trim();
+    if(!ex){alert('Please enter an exercise name.');return;}
+    entry.date=document.getElementById('fb-date').value||todayStr();
+    entry.exercise=ex;entry.sets=document.getElementById('fb-sets').value||'-';
+    entry.reps=document.getElementById('fb-reps').value||'-';entry.weight=document.getElementById('fb-weight').value||'-';
+    entry.note=document.getElementById('fb-notes').value.trim();
+    document.getElementById('fb-exercise').value='';document.getElementById('fb-notes').value='';
   }
   entries.unshift(entry);completions[entry.date+'|'+type]=true;
   persist();showToast('Logged!');
@@ -500,7 +523,8 @@ function entryRow(e){
   else if(e.type==='upper'||e.type==='legs') detail=`<strong>${e.exercise}</strong> ${e.sets}\u00d7${e.reps} @ ${e.weight}kg${ns}`;
   else if(e.type==='abs') detail=`<strong>${e.exercise}</strong> ${e.sets}\u00d7${e.reps}${ns}`;
   else if(e.type==='cardio') detail=`<strong>${e.activity}</strong> ${e.duration} min \u00b7 ${e.distance} km${ns}`;
-  else detail=`<strong>${e.style}</strong> ${e.duration} min \u00b7 ${e.intensity}${ns}`;
+  else if(e.type==='yoga') detail=`<strong>${e.style}</strong> ${e.duration} min \u00b7 ${e.intensity}${ns}`;
+  else detail=`<strong>${e.exercise}</strong> ${e.sets}\u00d7${e.reps} @ ${e.weight}kg${ns}`;
   return`<tr><td style="width:90px;padding:10px">${badge}</td><td style="padding:10px">${detail}</td><td style="width:40px;text-align:right;padding:10px"><button class="del-btn" onclick="deleteEntry(${e.id})">\u2715</button></td></tr>`;
 }
 
@@ -523,11 +547,11 @@ function renderSummary(){
   const el=document.getElementById('summary-content');
   if(!entries.length){el.innerHTML='<div class="empty">No data yet.</div>';return;}
   const total=entries.length;
-  const tc={upper:0,legs:0,abs:0,cardio:0,yoga:0};
+  const tc={upper:0,legs:0,abs:0,cardio:0,yoga:0,fullbody:0};
   entries.forEach(e=>{if(tc[e.type]!==undefined)tc[e.type]++;});
   const cardioMins=entries.filter(e=>e.type==='cardio'&&e.duration&&e.duration!=='-').reduce((s,e)=>s+Number(e.duration),0);
   const yogaMins=entries.filter(e=>e.type==='yoga'&&e.duration&&e.duration!=='-').reduce((s,e)=>s+Number(e.duration),0);
-  const barColors={upper:'#7F77DD',legs:'#1D9E75',abs:'#BA7517',cardio:'#378ADD',yoga:'#D4537E'};
+  const barColors={upper:'#7F77DD',legs:'#1D9E75',abs:'#BA7517',cardio:'#378ADD',yoga:'#D4537E',fullbody:'#888780'};
   const bars=Object.entries(tc).map(([t,c])=>`
     <div class="bar-row">
       <span class="badge badge-${t}" style="min-width:80px;text-align:center">${TYPE_LABEL[t]}</span>
@@ -552,7 +576,7 @@ function showToast(msg){
 loadLocal();
 updateSyncBanner();
 const d=todayStr();
-['u-date','l-date','a-date','c-date','y-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=d;});
+['u-date','l-date','a-date','c-date','y-date','fb-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=d;});
 renderSchedule();
 loadFromCloud();
 </script>
